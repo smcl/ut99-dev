@@ -1,0 +1,4 @@
+[Public]
+
+Object=(Name=GolemMutator.GolemMutator,Class=Class,MetaClass=Engine.Mutator,Description="Golem")
+Object=(Name=GolemMutator.GolemBot,Class=Class,MetaClass=BotPack.TMale1Bot,Description="The Golem Bot")
