@@ -1,4 +1,4 @@
-class GolemBot extends TMale1Bot;
+class GolemBot extends TMale1Bot; // we inherit a LOT of behaviour from this and the base Bot class
 
 var private GolemMutator _mutator;
 
@@ -171,7 +171,12 @@ state GameEnded {
 }
 
 state Dying {
-    /* inherit all */
+	function ReStartPlayer()
+	{
+        BroadcastMessage(PlayerReplicationInfo.PlayerName@"has failed to protect"@_mutator.TargetPlayerName@"and will be liquidated");
+        _mutator.GolemActive = False;
+        super.Destroy();
+    }
 }
 
 defaultproperties
