@@ -2,6 +2,7 @@ class GolemMutator extends Mutator;
 
 var() string TargetPlayerName;
 var bool GolemActive;
+var PlayerFinder PlayerFinder;
 
 var private bool MutatorInitialized;
 var private string EnteredToProtect;
@@ -12,6 +13,10 @@ function PostBeginPlay()
     {
         // register ourselves as a damage mutator
         Level.Game.RegisterDamageMutator(self);
+
+        // initialize playerfinder
+        PlayerFinder = new Class'GolemMutator.PlayerFinder';
+        PlayerFinder.Initialize(self);
 
         // ensure we don't re-enter
         MutatorInitialized = true;
@@ -124,7 +129,7 @@ function Bot SpawnBot(out NavigationPoint startSpot)
     Level.Game.AddDefaultInventory(newBot);
 
     // attach the mutator (so we can access the player etc)
-    newBot.AttachMutator(self);
+    newBot.Initialize(self);
 
     return newBot;
 }
@@ -139,8 +144,8 @@ function AddWeapon(Pawn botPawn, Class<Weapon> weaponClass)
     local Weapon newWeapon;
     newWeapon = Spawn(
         weaponClass,
-        /* actor */,
-        /* name  */,
+        /* Actor owner */,
+        /* Name tag  */,
         botPawn.Location);
 
     if(newWeapon != None)
@@ -184,21 +189,6 @@ function float DistanceBetween(Vector fromVector, Vector toVector) {
     return VSize(difference);
 }
 
-// TODO: put this into a separate class, it's used by both the Mutator and the Bot
-function Pawn GetSean()
-{
-    local Pawn p;
-    foreach AllActors(class 'Pawn', p)
-    {
-        if (p.PlayerReplicationInfo.PlayerName == TargetPlayerName)
-        {
-            return p;
-        }
-    }
-
-    return None;
-}   
-
 function NavigationPoint FindPlayerStart()
 {
     local PlayerStart current, closest;
@@ -207,7 +197,7 @@ function NavigationPoint FindPlayerStart()
 
     closest = None;
     closestDistance = -1;
-    sean = GetSean();
+    sean = PlayerFinder.GetPlayer(TargetPlayerName);
 
     foreach AllActors(class 'PlayerStart', current)
     {

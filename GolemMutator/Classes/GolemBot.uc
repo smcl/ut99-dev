@@ -1,34 +1,20 @@
 class GolemBot extends TFemale2Bot; // we inherit a LOT of behaviour from this and the base Bot class
 
+var() bool LeaveOnDeath;
 var private GolemMutator _mutator;
 
-function AttachMutator(GolemMutator mutator)
+function Initialize(GolemMutator mutator)
 {
     _mutator = mutator;
 }
 
-function Pawn GetSean()
-{
-    local Pawn p;
-    foreach AllActors(class 'Pawn', p)
-    {
-        if (p.PlayerReplicationInfo.PlayerName == _mutator.TargetPlayerName)
-        {
-            return p;
-        }
-    }
-
-    return None;
-}   
-
 function bool SeekSean()
 {
     local Pawn maybeSean;
-    maybeSean = GetSean();
-    if (maybeSean != None && PathTowardSean(maybeSean) )
-    {
-        return true;
-    }
+
+    maybeSean = _mutator.PlayerFinder.GetPlayer(_mutator.TargetPlayerName);
+    if (maybeSean != None)
+        return PathTowardSean(maybeSean);
 
     return false;
 }
@@ -40,18 +26,15 @@ function bool PathTowardSean(Actor sean)
     
     path = FindPathTo(sean.Location); 
         
-    success = (path != None);    
-    
-    if (success)
+    if (path != None)
     {
-        MoveTarget = path; 
-        Destination = path.Location;
+        Log("couldn't find path to sean");
+        return false;
     }
-    else {
-        log("couldn't find path to sean");
-    }
-    
-    return success;
+
+    MoveTarget = path; 
+    Destination = path.Location;
+    return true;
 }
 
 function eAttitude AttitudeTo(Pawn other)
@@ -173,14 +156,21 @@ state GameEnded {
 state Dying {
 	function ReStartPlayer()
 	{
-        BroadcastMessage(PlayerReplicationInfo.PlayerName@"has failed to protect"@_mutator.TargetPlayerName@"and will be liquidated");
-        _mutator.GolemActive = False;
-        super.Destroy();
+        if (LeaveOnDeath)
+        {
+            BroadcastMessage(PlayerReplicationInfo.PlayerName@"has failed to protect"@_mutator.TargetPlayerName@"and will be liquidated");
+            _mutator.GolemActive = False;
+            super.Destroy();
+        }
+        else {
+            super.ReStartPlayer();
+        }
     }
 }
 
 defaultproperties
 {
+    LeaveOnDeath=false
     GroundSpeed=800.000000
     AirSpeed=800.000000
 }
