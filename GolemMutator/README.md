@@ -6,8 +6,7 @@ Whenever player "sean" is harmed, spawn a super-strength, stacked beast of a bot
 
 ## TODO:
 
-- choose a suitable model + skin
-- announce on entering the arena
+- announce self on entering the arena
 - keep prioritizing bots that attack "sean" (stack? or just set `Bot.Enemy`?)
-- remove the dependency on `BotConfig` - we can handle this ourselves
 - GetSean() into some common code both can Bot+Mutator can use (+ generic?)
+- `GolemBot` should subclass `FemaleBot` (or even just `Bot`) instead of `FemaleBotPlus`

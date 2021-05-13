@@ -4,25 +4,14 @@ var() string TargetPlayerName;
 var bool GolemActive;
 
 var private bool MutatorInitialized;
-var private ChallengeBotInfo BotConfig;
-var private class<ChallengeBotInfo> BotConfigType;
 var private string EnteredToProtect;
 
 function PostBeginPlay()
 {
     if (!MutatorInitialized)
     {
-        // instantiate the BotConfig
-        BotConfig = Spawn(BotConfigType);
-
         // register ourselves as a damage mutator
         Level.Game.RegisterDamageMutator(self);
-
-        // setup the bot
-        BotConfig.SetBotName("protekt0r", 0);
-        BotConfig.BotSkills[0] = 10;
-        BotConfig.BotAccuracy[0] = 1.0;
-        BotConfig.Alertness[0] = 1.0;
 
         // ensure we don't re-enter
         MutatorInitialized = true;
@@ -100,7 +89,7 @@ function Bot SpawnBot(out NavigationPoint startSpot)
     startSpot = FindPlayerStart();
     if (startSpot == None)
     {
-        log("Could not find starting spot for Bot");
+        Log("Could not find starting spot for Bot");
         return None;
     }
 
@@ -122,8 +111,9 @@ function Bot SpawnBot(out NavigationPoint startSpot)
 
     // customize the player (id, team, skin etc)
     newBot.PlayerReplicationInfo.PlayerID = Level.Game.CurrentID++;
-    newBot.PlayerReplicationInfo.Team = BotConfig.GetBotTeam(0);
-    BotConfig.CHIndividualize(newBot, 0, 1);
+    newBot.PlayerReplicationInfo.Team = 0;
+    IndividualizeBot(newBot);
+
     newBot.ViewRotation = startSpot.Rotation;
     
     // broadcast a welcome message.
@@ -232,12 +222,63 @@ function NavigationPoint FindPlayerStart()
     return closest;
 }
 
+function IndividualizeBot(Bot newBot)
+{
+    local string BotName;
+    local string BotClass;
+    local string BotSkin;
+    local string BotFace;
+    local string FavoriteWeapon;
+    local float CombatStyle;
+    local float Alertness;
+    local float StrafingAbility;
+    local float Camping;
+    local float Skill;
+    local int Accuracy;
+    local int Team;
+    local byte Difficulty;
+
+    BotName         = "pr0tekt0rka";
+    BotClass        = "BotPack.TFemale2Bot";
+    BotSkin         = "SGirlSkins.Garf";
+    BotFace         = "SGirlSkins.Isis";
+    FavoriteWeapon  = "Botpack.Minigun2";
+    CombatStyle     = 1.000000;
+    Alertness       = 1.0;
+    StrafingAbility = 1.0; // ???
+    Camping         = 0.0;
+    Skill           = 10.0;
+    Accuracy        = 1.0;
+    Team            = 255;
+    Difficulty      = 4.0;
+
+    // Set bot's skin
+    newBot.Static.SetMultiSkin(newBot, BotSkin, BotFace, Team);
+    Level.Game.ChangeName(newBot, BotName, false);
+    newBot.InitializeSkill(Difficulty + Skill);
+
+    if ((FavoriteWeapon != "") && (FavoriteWeapon != "None"))
+        newBot.FavoriteWeapon = class<Weapon>(DynamicLoadObject(FavoriteWeapon, class'Class'));
+
+    newBot.Accuracy = Accuracy;
+    newBot.CombatStyle = newBot.Default.CombatStyle + 0.7 * CombatStyle;
+    newBot.BaseAggressiveness = 0.5 * (newBot.Default.Aggressiveness + newBot.CombatStyle);
+    newBot.BaseAlertness = Alertness;
+    newBot.CampingRate = Camping;
+    newBot.bJumpy = false; // nah you don't get to be jumpy
+    newBot.StrafingAbility = StrafingAbility;
+
+    // if ( VoiceType[n] != "" && VoiceType[n] != "None" )
+    //     NewBot.PlayerReplicationInfo.VoiceType = class<VoicePack>(DynamicLoadObject(VoiceType[n], class'Class'));
+    
+    // if(NewBot.PlayerReplicationInfo.VoiceType == None)
+    //     NewBot.PlayerReplicationInfo.VoiceType = class<VoicePack>(DynamicLoadObject(NewBot.VoiceType, class'Class'));
+}
+
 defaultproperties
 {
     MutatorInitialized=false
     GolemActive=false
     TargetPlayerName="sean"
-    BotConfig=None
-    BotConfigType=Class'Botpack.ChallengeBotInfo'
     EnteredToProtect=" has entered the game to protect "
 }

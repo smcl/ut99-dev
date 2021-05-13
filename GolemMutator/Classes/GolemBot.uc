@@ -1,4 +1,4 @@
-class GolemBot extends TMale1Bot; // we inherit a LOT of behaviour from this and the base Bot class
+class GolemBot extends TFemale2Bot; // we inherit a LOT of behaviour from this and the base Bot class
 
 var private GolemMutator _mutator;
 
