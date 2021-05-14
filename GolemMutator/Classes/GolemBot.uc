@@ -26,7 +26,7 @@ function bool PathTowardSean(Actor sean)
     
     path = FindPathTo(sean.Location); 
         
-    if (path != None)
+    if (path == None)
     {
         Log("couldn't find path to sean");
         return false;
@@ -173,4 +173,5 @@ defaultproperties
     LeaveOnDeath=false
     GroundSpeed=800.000000
     AirSpeed=800.000000
+    DrawScale=1.5
 }

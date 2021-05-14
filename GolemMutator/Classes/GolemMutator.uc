@@ -227,6 +227,7 @@ function IndividualizeBot(Bot newBot)
     local int Accuracy;
     local int Team;
     local byte Difficulty;
+    local float SightRadius;
 
     BotName         = "pr0tekt0rka";
     BotClass        = "BotPack.TFemale2Bot";
@@ -241,6 +242,7 @@ function IndividualizeBot(Bot newBot)
     Accuracy        = 1.0;
     Team            = 255;
     Difficulty      = 4.0;
+    SightRadius     = 10000.0;
 
     // Set bot's skin
     newBot.Static.SetMultiSkin(newBot, BotSkin, BotFace, Team);
@@ -257,6 +259,7 @@ function IndividualizeBot(Bot newBot)
     newBot.CampingRate = Camping;
     newBot.bJumpy = false; // nah you don't get to be jumpy
     newBot.StrafingAbility = StrafingAbility;
+    newBot.SightRadius = SightRadius;
 
     // if ( VoiceType[n] != "" && VoiceType[n] != "None" )
     //     NewBot.PlayerReplicationInfo.VoiceType = class<VoicePack>(DynamicLoadObject(VoiceType[n], class'Class'));
