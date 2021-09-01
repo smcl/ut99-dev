@@ -1,0 +1,3 @@
+[Public]
+
+Object=(Name=StubHud.StubHud,Class=Class,MetaClass=Engine.Mutator,Description="StubHud, stub implementation of a HUD mutator")
