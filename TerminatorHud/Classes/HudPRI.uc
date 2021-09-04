@@ -1,12 +1,7 @@
 class HudPRI extends ReplicationInfo;
 
-// replicated
 var PlayerReplicationInfo OwnerPRI;
 var int foo;
-
-// not replicated
-
-// list
 var HudPRI next;
 
 replication {
@@ -68,6 +63,6 @@ function HudPRI Get(PlayerReplicationInfo PRI) {
 		}
 		curr = curr.next;
 	}
-	Log("Get: Must never happen");
+	
 	return None;
 }

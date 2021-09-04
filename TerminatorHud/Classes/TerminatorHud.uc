@@ -9,6 +9,7 @@ simulated function Tick(float DeltaTime) {
     if (Level.NetMode != NM_DedicatedServer) {
         if (!bHUDMutator) RegisterHUDMutator();
     }
+
     if (Level.NetMode != NM_Client) {
         // do something on server
         GetRoot();
@@ -16,24 +17,17 @@ simulated function Tick(float DeltaTime) {
 }
 
 function Timer() {
-    if (CurrPRI == None) {
-        Log("TerminatorHud: not doing the thing, CurrPRI is None");
-        GetRoot().UpdateAll();
-        return;
-    }
-
     GetRoot().UpdateAll();
 }
 
-
-simulated function PostRender(canvas C) {
+simulated function PostRender(canvas c) {
     local HudPRI curr;
     local Pawn p;
     
     if (NextHUDMutator != None)
-        NextHUDMutator.PostRender(C);
+        NextHUDMutator.PostRender(c);
         
-    curr = GetPlayerHudPRI(C.Viewport.Actor);
+    curr = GetPlayerHudPRI(c.Viewport.Actor);
 
     if (curr != None) {
         foreach AllActors(class 'Pawn', p) {
@@ -41,34 +35,35 @@ simulated function PostRender(canvas C) {
                 continue;
             }
 
-            DrawPlayerBox(C, p.Location, p.ViewRotation);
-            MaybeDrawPlayerTarget(C, p.Location, p.Velocity);
+            DrawPlayerBox(c, p.Location, p.ViewRotation);
+            MaybeDrawPlayerTarget(c, p.Location, p.Velocity);
         }
     }
 }
 
-simulated function vector RotateZAndTranslate(vector origin, vector point, float sinYaw, float cosYaw) {
-    local float newX, newY, newZ;
-    local vector newPoint;
+function HudPRI GetRoot() {
+    local HudPRI curr;
+    
+    if (RootPRI == None) {
+        RootPRI = Spawn(class'HudPRI', Self);
+    }
 
-    newX = (point.X * cosYaw) - (point.Y * sinYaw) + (origin.X);
-    newY = (point.X * sinYaw) + (point.Y * cosYaw) + (origin.Y);
-    newZ = (point.Z) + origin.Z;
-
-    newPoint.X = newX;
-    newPoint.Y = newY;
-    newPoint.Z = newZ;
-
-    return newPoint;
+    return RootPRI;
 }
 
+simulated function HudPRI GetPlayerHudPRI(PlayerPawn player) {
+    local HudPRI curr;
 
-simulated function DrawProjectileTargetReticle(Canvas c, Vector point, texture crosshair, int size, float textureScale) {
-    local int XPos, YPos;
-    if (getXY(C, point, XPos, YPos) > 0) {
-        C.SetPos(XPos - size / 2.0, YPos - size / 2.0);
-        C.DrawIcon(crosshair, textureScale);
+    if (CurrPRI == None) {
+        foreach AllActors(class'HudPRI', curr) {
+            if (curr.OwnerPRI == player.PlayerReplicationInfo) {
+                CurrPRI = curr;
+                break;
+            }
+        }
     }
+
+    return CurrPRI;
 }
 
 simulated function DrawPlayerBox(Canvas c, vector playerLocation, rotator playerRotation) {
@@ -154,19 +149,43 @@ simulated function MaybeDrawPlayerTarget(Canvas c, vector targetLocation, vector
         return;
     }
 
-    if (origin.Weapon.ProjectileClass != None && tryCalculateIntercept(targetLocation, targetVelocity, originLocation, origin.Weapon.ProjectileSpeed, interceptLocation)) {
+    if (origin.Weapon.ProjectileClass != None && TryCalculateIntercept(targetLocation, targetVelocity, originLocation, origin.Weapon.ProjectileSpeed, interceptLocation)) {
         DrawLine3D(c, targetLocation, interceptLocation);
         DrawProjectileTargetReticle(c, interceptLocation, texture'chair4', 64, 1.0);
 
     }
 
-    if (origin.Weapon.AltProjectileClass != None && tryCalculateIntercept(targetLocation, targetVelocity, originLocation, origin.Weapon.AltProjectileSpeed, interceptLocation)) {
+    if (origin.Weapon.AltProjectileClass != None && TryCalculateIntercept(targetLocation, targetVelocity, originLocation, origin.Weapon.AltProjectileSpeed, interceptLocation)) {
         DrawLine3D(c, targetLocation, interceptLocation);
         DrawProjectileTargetReticle(c, interceptLocation, texture'chair5', 64, 1.0);
     }
 }
 
-simulated function bool tryCalculateIntercept(vector a, vector v, vector b, float s, out vector intercept) {
+simulated function vector RotateZAndTranslate(vector origin, vector point, float sinYaw, float cosYaw) {
+    local float newX, newY, newZ;
+    local vector newPoint;
+
+    newX = (point.X * cosYaw) - (point.Y * sinYaw) + (origin.X);
+    newY = (point.X * sinYaw) + (point.Y * cosYaw) + (origin.Y);
+    newZ = (point.Z) + origin.Z;
+
+    newPoint.X = newX;
+    newPoint.Y = newY;
+    newPoint.Z = newZ;
+
+    return newPoint;
+}
+
+
+simulated function DrawProjectileTargetReticle(Canvas c, Vector point, texture crosshair, int size, float textureScale) {
+    local int XPos, YPos;
+    if (GetXY(C, point, XPos, YPos) > 0) {
+        c.SetPos(XPos - size / 2.0, YPos - size / 2.0);
+        c.DrawIcon(crosshair, textureScale);
+    }
+}
+
+simulated function bool TryCalculateIntercept(vector a, vector v, vector b, float s, out vector intercept) {
     local float dx, dy, dz,
                 h1, h2,
                 root, minusPHalf, discriminant,
@@ -238,57 +257,52 @@ simulated function bool tryCalculateIntercept(vector a, vector v, vector b, floa
     return true;
 }
 
-simulated function float getXY(Canvas C, vector location, out int screenX, out int screenY) {
-    local vector X, Y, Z, CamLoc, TargetDir, Dir, XY;
-    local rotator CamRot;
-    local Actor Camera;
-    local float TanFOVx, TanFOVy;
-    local float ret;
+simulated function DrawLine3D( Canvas c, vector p1, vector p2) {
+    local int x1, y1, x2, y2;
+    local float a1, a2;
 
-    C.ViewPort.Actor.PlayerCalcView(Camera, CamLoc, CamRot);
+    a1 = GetXY(c, p1, x1, y1);  
+    a2 = GetXY(c, p2, x2, y2);
 
-    TanFOVx = Tan(C.ViewPort.Actor.FOVAngle / 114.591559); // 360/Pi = 114.5915590...
-    TanFOVy = (C.ClipY / C.ClipX) * TanFOVx;
-    GetAxes(CamRot, X, Y, Z);
-
-    TargetDir = Location - CamLoc;
-
-    ret = X dot TargetDir;
-
-    if (ret > 0) {
-        Dir = X * (X dot TargetDir);
-        XY = TargetDir - Dir;
-
-        screenX = C.ClipX * 0.5 * (1.0 + (XY dot Y) / (VSize(Dir) * TanFOVx));
-        screenY = C.ClipY * 0.5 * (1.0 - (XY dot Z) / (VSize(Dir) * TanFOVy));
+    if (a1 <= 0 && a2 <= 0)
+        return;
+    else if (a1 <= 0) {
+        p1 -= p2;
+        p1 *= a2/(a2 - a1);
+        p1 -= Normal(p1);
+        p1 += p2;
+        GetXY(c, p1, x1, y1);
+    } else if (a2 <= 0) {
+        p2 -= p1;
+        p2 *= a1/(a1 - a2);
+        p2 -= Normal(p2);
+        p2 += p1;
+        GetXY(c, p2, x2, y2);
     }
 
-    return ret;
+    // if (R >= 0)
+    //     SetColor(C, R, G, B);
+    DrawLine(c, x1, y1, x2, y2);
 }
-
-function HudPRI GetRoot() {
-    local HudPRI curr;
-    
-    if (RootPRI == None) {
-        RootPRI = Spawn(class'HudPRI', Self);
-    }
-    return RootPRI;
-}
-
 
 simulated function DrawLine(Canvas Canvas, int x1, int y1, int x2, int y2) {
     local int i, j, n, dx, dy;
     local float a, b;
+
     if (x1 == 0 && y1 == 0) return;
     if (x2 == 0 && y2 == 0) return;
+
     dx = x2 - x1;
     dy = y2 - y1;
+
     if (Abs(dx) > Abs(dy)) {        
         if (dx == 0) return;
         if (dx > 0) j = 1; else j = -1;
+
         n = Min(Canvas.ClipX, Max(0, x2));
         a = float(dy)/dx;
         b = float(y1) - a*x1;
+
         for (i = Min(Canvas.ClipX, Max(0, x1)); i != n; i += j) {
             canvas.SetPos(i, a*i + b);
             canvas.DrawRect(Texture'Botpack.FacePanel0', 2.0, 2.0);
@@ -296,9 +310,11 @@ simulated function DrawLine(Canvas Canvas, int x1, int y1, int x2, int y2) {
     } else {
         if (dy == 0) return;
         if (dy > 0) j = 1; else j = -1;
+
         n = Min(Canvas.ClipY, Max(0, y2));
         a = float(dx)/dy;
         b = float(x1) - a*y1;
+
         for (i = Min(Canvas.ClipY, Max(0, y1)); i != n; i += j) {
             canvas.SetPos(a*i + b, i);
             canvas.DrawRect(Texture'Botpack.FacePanel0', 2.0, 2.0);
@@ -306,50 +322,37 @@ simulated function DrawLine(Canvas Canvas, int x1, int y1, int x2, int y2) {
     }
 }
 
-simulated function DrawLine3D( Canvas C, vector P1, vector P2) {
-    local int x1, y1, x2, y2;
-    local float a1, a2;
+simulated function float GetXY(Canvas C, vector location, out int screenX, out int screenY) {
+    local vector x, y, z, camLoc, targetDir, dir, xy;
+    local rotator camRot;
+    local Actor camera;
+    local float tanFOVx, tanFOVy;
+    local float ret;
 
-    a1 = getXY(C, P1, x1, y1);  
-    a2 = getXY(C, P2, x2, y2);
-    if (a1 <= 0 && a2 <= 0) return;
-    if (a1 <= 0) {
-        P1 -= P2;
-        P1 *= a2/(a2 - a1);
-        P1 -= Normal(P1);
-        P1 += P2;
-        getXY(C, P1, x1, y1);
-    } else if (a2 <= 0) {
-        P2 -= P1;
-        P2 *= a1/(a1 - a2);
-        P2 -= Normal(P2);
-        P2 += P1;
-        getXY(C, P2, x2, y2);
+    C.ViewPort.Actor.PlayerCalcView(camera, camLoc, camRot);
+
+    tanFOVx = Tan(C.ViewPort.Actor.FOVAngle / 114.591559); // 360/Pi = 114.5915590...
+    tanFOVy = (C.ClipY / C.ClipX) * TanFOVx;
+    GetAxes(camRot, x, y, z);
+
+    targetDir = Location - camLoc;
+    ret = x dot targetDir;
+
+    if (ret > 0) {
+        dir = x * (x dot targetDir);
+        xy = targetDir - dir;
+
+        screenX = C.ClipX * 0.5 * (1.0 + (xy dot y) / (VSize(dir) * tanFOVx));
+        screenY = C.ClipY * 0.5 * (1.0 - (xy dot z) / (VSize(dir) * tanFOVy));
     }
-    // if (R >= 0)
-    //     SetColor(C, R, G, B);
-    DrawLine(C, x1, y1, x2, y2);
+
+    return ret;
 }
 
-function ModifyPlayer(Pawn Player) {
-    if (Level.NetMode != NM_Client && Player != None && Player.isA('PlayerPawn')) {
-        GetRoot().Get(PlayerPawn(Player).PlayerReplicationInfo);
+function ModifyPlayer(Pawn player) {
+    if (Level.NetMode != NM_Client && player != None && player.isA('PlayerPawn')) {
+        GetRoot().Get(PlayerPawn(player).PlayerReplicationInfo);
     }
-}
-
-simulated function HudPRI GetPlayerHudPRI(PlayerPawn Player) {
-    local HudPRI curr;
-
-    if (CurrPRI == None) {
-        foreach AllActors(Class'HudPRI', curr) {
-            if (curr.OwnerPRI == Player.PlayerReplicationInfo) {
-                CurrPRI = curr;
-                break;
-            }
-        }
-    }
-
-    return CurrPRI;
 }
 
 defaultproperties {
